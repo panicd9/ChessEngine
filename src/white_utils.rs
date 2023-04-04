@@ -1,6 +1,8 @@
+use crate::black_utils::get_all_attacked_squares_by_black;
+// use crate::chessboard;
 use crate::chessboard::chessboard::ChessBoard;
 use crate::chessboard::chessboard::Constants;
-
+use crate::chessboard::chessboard::OverflowingLeftShift;
 
 pub fn check_white_pawn_take(pawn_square: u64, attacked_square: u64, curr_chessboard: &ChessBoard, result: &mut Vec<ChessBoard>) {
     if attacked_square & curr_chessboard.get_all_black_pieces() > 0 {
@@ -97,40 +99,93 @@ pub fn white_king_move(king_square: u64, attacked_square: u64, curr_chessboard: 
     result.push(new_chessboard);
 }
 
-pub fn are_white_short_castling_squares_under_attack(chessboard: &mut ChessBoard) -> bool {
-    let king_position = chessboard.white_king;
+pub fn get_all_attacked_squares_by_white(cb: &ChessBoard) -> (u64, Vec<ChessBoard>) {
+    let mut attacked_squares: u64 = 0;
+
+    let mut pseudo_legal_white_moves: Vec<ChessBoard> = vec![];
+
+
+    pseudo_legal_white_moves.append(&mut cb.get_all_pseudo_legal_white_rook_moves());
+    pseudo_legal_white_moves.append(&mut cb.get_all_pseudo_legal_white_knight_moves());
+    pseudo_legal_white_moves.append(&mut cb.get_all_pseudo_legal_white_bishop_moves());
+    pseudo_legal_white_moves.append(&mut cb.get_all_pseudo_legal_white_queen_moves());
+    pseudo_legal_white_moves.append(&mut cb.get_all_pseudo_legal_white_king_moves());
+    
+    for pos in &pseudo_legal_white_moves {
+        attacked_squares = attacked_squares | pos.get_all_white_pieces();
+    }
+
+    pseudo_legal_white_moves.append(&mut cb.get_all_pseudo_legal_white_pawn_moves());
+
+    // add attacked squares by pawn
+
+    let mut square: u64;
+    // 64 - 8 = 56 // cant occupy 1st rank
+    for i in 8..56 {
+        square = 1 << i;
+        // square =  2_u64.pow(i);
+        // check if pawn occupies square
+        if cb.white_pawns & square > 0 {
+
+            // CHECK FOR UPRIGHT TAKE ( attacked_square = square << 9 )
+            // let attacked_square = square * 2_u64.pow(9);
+            let (attacked_square, overflow) = square.overflowing_loss_checked_shl(9);
+            // cant be on A file after taking upright
+            if !overflow && attacked_square & Constants::A_FILE == 0 {
+                attacked_squares = attacked_squares | attacked_square;
+            }
+
+            // CHECK FOR UPLEFT TAKE ( attacked_square = square << 7 )
+            let attacked_square = square << 7;
+            // cant be on H file after taking upleft
+            if attacked_square & Constants::H_FILE == 0 {
+                attacked_squares = attacked_squares | attacked_square;
+            }
+        }
+    }
+
+    return (attacked_squares, pseudo_legal_white_moves);
+}
+
+pub fn are_white_short_castling_squares_under_attack(chessboard: &ChessBoard) -> bool {
+
     let (e1, f1, g1) = (16, 32, 64);
     let (e1_attacked, f1_attacked, g1_attacked);
 
-    chessboard.white_king = e1;
-    e1_attacked = chessboard.is_white_king_checked().0;
-    chessboard.white_king = f1;
-    f1_attacked = chessboard.is_white_king_checked().0;
-    chessboard.white_king = g1;
-    g1_attacked = chessboard.is_white_king_checked().0;
 
-    chessboard.white_king = king_position;
+    e1_attacked = get_all_attacked_squares_by_black(chessboard).0 & e1 > 0;
+
+    f1_attacked = get_all_attacked_squares_by_black(chessboard).0 & f1 > 0;
+
+    g1_attacked = get_all_attacked_squares_by_black(chessboard).0 & g1 > 0;
+
+
+    
 
     if e1_attacked || f1_attacked || g1_attacked {
         return true;
     } else {
         return false;
     }
+
+
+    
+
 }
 
-pub fn are_white_long_castling_squares_under_attack(chessboard: &mut ChessBoard) -> bool {
-    let king_position = chessboard.white_king;
+pub fn are_white_long_castling_squares_under_attack(chessboard: &ChessBoard) -> bool {
+    // let king_position = chessboard.white_king;
     let (c1, d1, e1) = (4, 8, 16);
     let (c1_attacked, d1_attacked, e1_attacked);
 
-    chessboard.white_king = e1;
-    e1_attacked = chessboard.is_white_king_checked().0;
-    chessboard.white_king = d1;
-    d1_attacked = chessboard.is_white_king_checked().0;
-    chessboard.white_king = c1;
-    c1_attacked = chessboard.is_white_king_checked().0;
+    
+    e1_attacked = get_all_attacked_squares_by_black(chessboard).0 & e1 > 0;
 
-    chessboard.white_king = king_position;
+    d1_attacked = get_all_attacked_squares_by_black(chessboard).0 & d1 > 0;
+
+    c1_attacked = get_all_attacked_squares_by_black(chessboard).0 & c1 > 0;
+
+
 
     if e1_attacked || d1_attacked || c1_attacked {
         return true;

@@ -23,14 +23,12 @@
 #![allow(non_camel_case_types, dead_code)]
 
 pub mod chessboard {
-    use std::iter::Inspect;
-    use std::time::Instant;
     use std::vec;
 
     use crate::white_utils::*;
     use crate::black_utils::*;
 
-    trait OverflowingLeftShift {
+    pub(crate) trait OverflowingLeftShift {
         fn overflowing_loss_checked_shl(self, rhs: u32) -> (Self, bool) 
             where Self: std::marker::Sized;
     }
@@ -168,7 +166,7 @@ pub mod chessboard {
             print!("\n");
         }
 
-        pub fn is_white_king_checked(&mut self) -> (bool, Vec<ChessBoard>) {
+        pub fn is_white_king_checked(&self) -> (bool, Vec<ChessBoard>) {
             let mut next_pseudo_legal_black_moves = self.get_all_pseudo_legal_black_moves();
             let starting_len = next_pseudo_legal_black_moves.len();
 
@@ -180,7 +178,7 @@ pub mod chessboard {
             return (is_king_checked, next_pseudo_legal_black_moves);
         }
 
-        pub fn is_black_king_checked(&mut self) -> (bool, Vec<ChessBoard>) {
+        pub fn is_black_king_checked(&self) -> (bool, Vec<ChessBoard>) {
             let mut next_legal_positions = self.get_all_pseudo_legal_white_moves();
             let starting_len = next_legal_positions.len();
 
@@ -197,7 +195,7 @@ pub mod chessboard {
             let white_pawns = self.white_pawns;
             let mut square: u64;
             // 64 - 8 = 56 // cant occupy 1st rank
-            for i in 0..56 {
+            for i in 8..56 {
                 square = 1 << i;
                 // square =  2_u64.pow(i);
                 // check if pawn occupies square
@@ -205,9 +203,9 @@ pub mod chessboard {
 
                     // CHECK FOR UPRIGHT TAKE ( attacked_square = square << 9 )
                     // let attacked_square = square * 2_u64.pow(9);
-                    let attacked_square = square << 9;
+                    let (attacked_square, overflow) = square.overflowing_loss_checked_shl(9);
                     // cant be on A file after taking upright
-                    if attacked_square & Constants::A_FILE == 0 {
+                    if !overflow && attacked_square & Constants::A_FILE == 0 {
                         //check if there is enemy piece and take
                         check_white_pawn_take(square, attacked_square, self, &mut result);
                     }
@@ -266,7 +264,7 @@ pub mod chessboard {
 
                     // CHECK FOR DOWNRIGHT TAKE
                     let attacked_square = square >> 7;
-                    // cant be on A file after taking downright
+                    // cant be on A file after taking DOWNRIGHT
                     if attacked_square & Constants::A_FILE == 0 {
                         //check if there is enemy piece
                         if attacked_square & self.get_all_white_pieces() > 0 {
@@ -283,8 +281,8 @@ pub mod chessboard {
 
                     // CHECK FOR DOWNLEFT TAKE
                     let attacked_square = square >> 9;
-                    // cant be on H file after taking upleft
-                    if attacked_square & Constants::H_FILE == 0 {
+                    // cant be on H file after taking DOWNLEFT
+                    if attacked_square > 0 && attacked_square & Constants::H_FILE == 0 {
                         //check if there is enemy piece
                         if attacked_square & self.get_all_white_pieces() > 0 {
                             let mut new_chessboard = self.clone();
@@ -1202,7 +1200,7 @@ pub mod chessboard {
             return result;
         }
         
-        pub fn get_all_pseudo_legal_white_king_moves(&mut self) -> Vec<ChessBoard> {
+        pub fn get_all_pseudo_legal_white_king_moves(&self) -> Vec<ChessBoard> {
             let mut result: Vec<ChessBoard> = vec![];
             let white_king = self.white_king;
 
@@ -1273,7 +1271,7 @@ pub mod chessboard {
             return result;
         }
         
-        pub fn get_all_pseudo_legal_black_king_moves(&mut self) -> Vec<ChessBoard> {
+        pub fn get_all_pseudo_legal_black_king_moves(&self) -> Vec<ChessBoard> {
             let mut result: Vec<ChessBoard> = vec![];
             let black_king = self.black_king;
 
@@ -1344,7 +1342,7 @@ pub mod chessboard {
             return result;
         }
         
-        pub fn get_all_pseudo_legal_white_moves(&mut self) -> Vec<ChessBoard> {
+        pub fn get_all_pseudo_legal_white_moves(&self) -> Vec<ChessBoard> {
             let mut pseudo_legal_moves: Vec<ChessBoard> = vec![];
 
             pseudo_legal_moves.append(&mut self.get_all_pseudo_legal_white_pawn_moves());
@@ -1357,7 +1355,7 @@ pub mod chessboard {
             return pseudo_legal_moves;
         }
 
-        pub fn get_all_pseudo_legal_black_moves(&mut self) -> Vec<ChessBoard> {
+        pub fn get_all_pseudo_legal_black_moves(&self) -> Vec<ChessBoard> {
             let mut pseudo_legal_moves: Vec<ChessBoard> = vec![];
             // TODO: add other pieces
             pseudo_legal_moves.append(&mut self.get_all_pseudo_legal_black_pawn_moves());
@@ -1370,18 +1368,20 @@ pub mod chessboard {
             return pseudo_legal_moves;
         }
 
-        pub fn get_all_legal_white_moves(&mut self, pseudo_legal_white_moves: Option<&Vec<ChessBoard>>) -> (Vec<ChessBoard>, Vec<Vec<ChessBoard>>) {
+        pub fn get_all_legal_white_moves(&self, pseudo_legal_white_moves: Option<&Vec<ChessBoard>>) -> (Vec<ChessBoard>, Vec<Vec<ChessBoard>>) {
             
             let mut result: Vec<ChessBoard> = vec![];
-            let _pseudo_legal_white_moves: Vec<ChessBoard>;
+            let _pseudo_legal_white_moves: &Vec<ChessBoard>;
+            let temp ;
             // let now = Instant::now();
             if pseudo_legal_white_moves.is_some() {
                 // let now = Instant::now();
-                _pseudo_legal_white_moves = pseudo_legal_white_moves.unwrap().to_vec();
+                _pseudo_legal_white_moves = pseudo_legal_white_moves.unwrap();
                 // println!("{}", now.elapsed().as_micros());
             } else {
                 // println!("A");
-                _pseudo_legal_white_moves = self.get_all_pseudo_legal_white_moves();
+                temp = self.get_all_pseudo_legal_white_moves();
+                _pseudo_legal_white_moves = &temp;
             }
             
             // let elapsed = now.elapsed();
@@ -1391,14 +1391,14 @@ pub mod chessboard {
             let mut pseudo_legal_black_moves;
             let mut pseudo_legal_black_moves_for_each_white_move = vec![];
 
-            for mut mov in _pseudo_legal_white_moves {
+            for mov in _pseudo_legal_white_moves {
                 // let now = Instant::now();
                 (is_checked_after_white_move, pseudo_legal_black_moves) = mov.is_white_king_checked();
                 // let elapsed = now.elapsed();
                 // println!("is king checked? {}", elapsed.as_micros());
 
                 if !is_checked_after_white_move {
-                    result.push(mov);
+                    result.push(*mov);
                     pseudo_legal_black_moves_for_each_white_move.push(pseudo_legal_black_moves)
                 } 
             }
@@ -1406,18 +1406,20 @@ pub mod chessboard {
             return (result, pseudo_legal_black_moves_for_each_white_move);
         }
 
-        pub fn get_all_legal_black_moves(&mut self, pseudo_legal_black_moves: Option<&Vec<ChessBoard>>) -> (Vec<ChessBoard>, Vec<Vec<ChessBoard>>) {
+        pub fn get_all_legal_black_moves(&self, pseudo_legal_black_moves: Option<&Vec<ChessBoard>>) -> (Vec<ChessBoard>, Vec<Vec<ChessBoard>>) {
 
             let mut result: Vec<ChessBoard> = vec![];
             // let now = Instant::now();
 
-            let _pseudo_legal_black_moves: Vec<ChessBoard>;
+            let _pseudo_legal_black_moves: &Vec<ChessBoard>;
+            let temp ;
 
             if pseudo_legal_black_moves.is_some() {
-                _pseudo_legal_black_moves = pseudo_legal_black_moves.unwrap().to_vec();
+                _pseudo_legal_black_moves = pseudo_legal_black_moves.unwrap();
             } else {
                 // println!("B");
-                _pseudo_legal_black_moves = self.get_all_pseudo_legal_black_moves();
+                temp = self.get_all_pseudo_legal_black_moves();
+                _pseudo_legal_black_moves = &temp;
             }
             // let elapsed = now.elapsed();
             // println!("{}", elapsed.as_micros());
@@ -1426,11 +1428,11 @@ pub mod chessboard {
             let mut pseudo_legal_white_moves;
             let mut pseudo_legal_white_moves_for_each_black_move = vec![];
 
-            for mut mov in _pseudo_legal_black_moves {
+            for mov in _pseudo_legal_black_moves {
                 (is_checked_after_black_move, pseudo_legal_white_moves) = mov.is_black_king_checked();
 
                 if !is_checked_after_black_move {
-                    result.push(mov);
+                    result.push(*mov);
                     pseudo_legal_white_moves_for_each_black_move.push(pseudo_legal_white_moves)
                 } 
             }

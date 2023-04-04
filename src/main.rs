@@ -8,7 +8,7 @@ use std::{vec, env, time::Instant};
 use crate::chessboard::chessboard::ChessBoard;
 
 fn main() {
-    let mut cb = ChessBoard::new();
+    let cb = ChessBoard::new();
     cb.print_chessboard();
 
     // let white_move = cb.get_all_legal_white_moves();
@@ -23,17 +23,19 @@ fn main() {
     //     return;
     // }
 
-    
-    let mut last_positions = vec![cb];
+    // println!("SIZE: {}",std::mem::size_of::<ChessBoard>());
+
+    let mut last_positions: Vec<ChessBoard> = vec![cb];
     env::set_var("RUST_BACKTRACE", "full");
     let (mut legal_moves, mut pseudo_legal_white_moves, mut pseudo_legal_black_moves): (Vec<ChessBoard>, Vec<Vec<ChessBoard>>, Vec<Vec<ChessBoard>>) = (vec![], vec![], vec![]);
     let mut pseudo_legal_opposite_moves;
     let mut param: Option<&Vec<ChessBoard>>;
     let now = Instant::now();
 
+    
     for ply_num in 1..6 {
         let mut positions: Vec<ChessBoard> = vec![];
-        for (i,pos) in last_positions.iter_mut().enumerate() {
+        for (i,pos) in last_positions.iter().enumerate() {
             if pos.white_to_move {
 
                 if pseudo_legal_white_moves.is_empty(){
@@ -46,6 +48,7 @@ fn main() {
                 (legal_moves, pseudo_legal_opposite_moves) = pos.get_all_legal_white_moves(param);
                 positions.extend(legal_moves);
                 pseudo_legal_black_moves.extend(pseudo_legal_opposite_moves);
+                pseudo_legal_white_moves.clear();
                 // println!("Move #{}: {} possible moves", ply_num, positions.len())
             } else {
                 if pseudo_legal_black_moves.is_empty(){
@@ -56,6 +59,7 @@ fn main() {
                 (legal_moves, pseudo_legal_opposite_moves) = pos.get_all_legal_black_moves(param);
                 positions.extend(legal_moves);
                 pseudo_legal_white_moves.extend(pseudo_legal_opposite_moves);
+                pseudo_legal_black_moves.clear();
                 // opposite_pseudo_legal_positions.extend(pseudo_legal_opposite_moves);
                 // println!("Move #{}: {} possible moves", ply_num, positions.len())  
             }
@@ -68,8 +72,12 @@ fn main() {
         // }
 
         println!("Possible positions after move #{}: {} positions", ply_num, positions.len());
-        last_positions = positions;
+        println!("pseudo_legal_white_moves len #{}: {}", ply_num, pseudo_legal_white_moves.len());
+        println!("pseudo_legal_black_moves len #{}: {}", ply_num, pseudo_legal_black_moves.len());
 
+        
+        last_positions = positions;
+        // positions.clear();
         
     }
 
