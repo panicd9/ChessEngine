@@ -53,7 +53,13 @@ pub fn white_pawn_forward(pawn_square: u64, forward_square: u64, curr_chessboard
     }
 }
 
-pub fn white_bishop_move(bishop_square: u64, attacked_square: u64, curr_chessboard: &ChessBoard, result: &mut Vec<ChessBoard>) {
+pub fn white_bishop_move(bishop_square: u64, attacked_square: u64, curr_chessboard: &ChessBoard, result: &mut Vec<ChessBoard>) -> bool {
+    
+    if curr_chessboard.get_all_white_pieces() & attacked_square > 0 {
+        return true;
+    }
+
+    let mut hit_enemy_piece: bool = false;
     let mut new_chessboard = curr_chessboard.clone();
     new_chessboard.white_to_move = !new_chessboard.white_to_move;
     new_chessboard.prev_pos_pawns = new_chessboard.white_pawns;
@@ -63,13 +69,22 @@ pub fn white_bishop_move(bishop_square: u64, attacked_square: u64, curr_chessboa
 
     if curr_chessboard.get_all_black_pieces() & attacked_square > 0 {
         new_chessboard.remove_black_piece(attacked_square);
+        hit_enemy_piece = true;
     }
     
     result.push(new_chessboard);
+    return  hit_enemy_piece;
 }
 
-pub fn white_queen_move(queen_square: u64, attacked_square: u64, curr_chessboard: &ChessBoard, result: &mut Vec<ChessBoard>) {
+pub fn white_queen_move(queen_square: u64, attacked_square: u64, curr_chessboard: &ChessBoard, result: &mut Vec<ChessBoard>) -> bool {
+
+    if curr_chessboard.get_all_white_pieces() & attacked_square > 0 {
+        return true;
+    }
+
+    let mut hit_enemy_piece: bool = false;
     let mut new_chessboard = curr_chessboard.clone();
+
     new_chessboard.white_to_move = !new_chessboard.white_to_move;
     new_chessboard.prev_pos_pawns = new_chessboard.white_pawns;
     
@@ -78,12 +93,18 @@ pub fn white_queen_move(queen_square: u64, attacked_square: u64, curr_chessboard
 
     if curr_chessboard.get_all_black_pieces() & attacked_square > 0 {
         new_chessboard.remove_black_piece(attacked_square);
+        hit_enemy_piece = true;
     }
     
     result.push(new_chessboard);
+    return hit_enemy_piece;
 }
 
 pub fn white_king_move(king_square: u64, attacked_square: u64, curr_chessboard: &ChessBoard, result: &mut Vec<ChessBoard>) {
+    // if get_all_attacked_squares_by_black(curr_chessboard).0 & attacked_square > 0 {
+    //     return;
+    // }
+
     let mut new_chessboard = curr_chessboard.clone();
     new_chessboard.white_to_move = !new_chessboard.white_to_move;
     new_chessboard.prev_pos_pawns = new_chessboard.white_pawns;
@@ -152,12 +173,13 @@ pub fn are_white_short_castling_squares_under_attack(chessboard: &ChessBoard) ->
     let (e1, f1, g1) = (16, 32, 64);
     let (e1_attacked, f1_attacked, g1_attacked);
 
+    let all_attacked_squares_by_black = get_all_attacked_squares_by_black(chessboard).0;
 
-    e1_attacked = get_all_attacked_squares_by_black(chessboard).0 & e1 > 0;
+    e1_attacked = all_attacked_squares_by_black & e1 > 0;
 
-    f1_attacked = get_all_attacked_squares_by_black(chessboard).0 & f1 > 0;
+    f1_attacked = all_attacked_squares_by_black & f1 > 0;
 
-    g1_attacked = get_all_attacked_squares_by_black(chessboard).0 & g1 > 0;
+    g1_attacked = all_attacked_squares_by_black & g1 > 0;
 
 
     
@@ -178,12 +200,13 @@ pub fn are_white_long_castling_squares_under_attack(chessboard: &ChessBoard) -> 
     let (c1, d1, e1) = (4, 8, 16);
     let (c1_attacked, d1_attacked, e1_attacked);
 
-    
-    e1_attacked = get_all_attacked_squares_by_black(chessboard).0 & e1 > 0;
+    let all_attacked_squares_by_black = get_all_attacked_squares_by_black(chessboard).0;
 
-    d1_attacked = get_all_attacked_squares_by_black(chessboard).0 & d1 > 0;
+    e1_attacked = all_attacked_squares_by_black & e1 > 0;
 
-    c1_attacked = get_all_attacked_squares_by_black(chessboard).0 & c1 > 0;
+    d1_attacked = all_attacked_squares_by_black & d1 > 0;
+
+    c1_attacked = all_attacked_squares_by_black & c1 > 0;
 
 
 

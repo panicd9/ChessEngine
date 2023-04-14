@@ -23,6 +23,9 @@
 #![allow(non_camel_case_types, dead_code)]
 
 pub mod chessboard {
+    use std::collections::HashMap;
+    use std::num;
+    use std::result;
     use std::vec;
 
     use crate::white_utils::*;
@@ -53,7 +56,7 @@ pub mod chessboard {
         a8, b8, c8, d8, e8, f8, g8, h8  // 56 .. 63
     }
       
-    #[derive(Clone, Copy, Debug)]
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
     pub struct ChessBoard {
 
         pub white_to_move: bool,
@@ -117,23 +120,25 @@ pub mod chessboard {
         }
 
         pub fn remove_white_piece(&mut self, square: u64) {
-            if self.get_all_white_pieces() & square == 0 { println!("GRESKA 1 !!!"); return; }; // TODO: remove
+            // if self.get_all_white_pieces() & square == 0 { println!("GRESKA 1 !!!"); return; }; // TODO: remove
 
             if self.white_pawns & square > 0 { self.white_pawns -= square; return; }
             if self.white_rooks & square > 0 { self.white_rooks -= square; return; }
             if self.white_knights & square > 0 { self.white_knights -= square; return; }
             if self.white_bishops & square > 0 { self.white_bishops -= square; return; }
             if self.white_queens & square > 0 { self.white_queens -= square; return; }
+            if self.white_king & square > 0 { self.white_king -= square; return; }
         }
 
         pub fn remove_black_piece(&mut self, square: u64) {
-            if self.get_all_black_pieces() & square == 0 { println!("GRESKA 2 !!!"); return; }; // TODO: remove
+            // if self.get_all_black_pieces() & square == 0 { println!("GRESKA 2 !!!"); return; }; // TODO: remove
 
             if self.black_pawns & square > 0 { self.black_pawns -= square; return; }
             if self.black_rooks & square > 0 { self.black_rooks -= square; return; }
             if self.black_knights & square > 0 { self.black_knights -= square; return; }
             if self.black_bishops & square > 0 { self.black_bishops -= square; return; }
             if self.black_queens & square > 0 { self.black_queens -= square; return; }
+            if self.black_king & square > 0 { self.black_king -= square; return; }
         }
 
         pub fn get_all_pieces(&self) -> u64 {
@@ -179,15 +184,15 @@ pub mod chessboard {
         }
 
         pub fn is_black_king_checked(&self) -> (bool, Vec<ChessBoard>) {
-            let mut next_legal_positions = self.get_all_pseudo_legal_white_moves();
-            let starting_len = next_legal_positions.len();
+            let mut next_pseudo_legal_white_moves = self.get_all_pseudo_legal_white_moves();
+            let starting_len = next_pseudo_legal_white_moves.len();
 
-            next_legal_positions.retain(|&e| e.black_king > 0);
-            let curr_len = next_legal_positions.len();
+            next_pseudo_legal_white_moves.retain(|&e| e.black_king > 0);
+            let curr_len = next_pseudo_legal_white_moves.len();
 
             let is_king_checked = starting_len != curr_len;
 
-            return (is_king_checked, next_legal_positions);
+            return (is_king_checked, next_pseudo_legal_white_moves);
         }
         
         pub fn get_all_pseudo_legal_white_pawn_moves(&self) -> Vec<ChessBoard> {
@@ -381,7 +386,7 @@ pub mod chessboard {
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(8);
                     }
                     //check if while exited because of enemy piece
-                    if self.get_all_black_pieces() & attacked_square > 0 {
+                    if self.get_all_black_pieces() & attacked_square > 0 && !overflow{
                         let mut new_chessboard = self.clone();
                         new_chessboard.white_to_move = !new_chessboard.white_to_move;
                         new_chessboard.prev_pos_pawns = new_chessboard.white_pawns;
@@ -430,7 +435,7 @@ pub mod chessboard {
                         attacked_square = attacked_square >> 1;
                     }
                     //check if while exited because of enemy piece
-                    if self.get_all_black_pieces() & attacked_square > 0 {
+                    if self.get_all_black_pieces() & attacked_square > 0 && ( attacked_square > 0 && (attacked_square & Constants::H_FILE) == 0 ){
                         let mut new_chessboard = self.clone();
                         new_chessboard.white_to_move = !new_chessboard.white_to_move;
                         new_chessboard.prev_pos_pawns = new_chessboard.white_pawns;
@@ -454,7 +459,7 @@ pub mod chessboard {
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(1);
                     }
                     //check if while exited because of enemy piece
-                    if self.get_all_black_pieces() & attacked_square > 0 {
+                    if self.get_all_black_pieces() & attacked_square > 0 && ( (attacked_square & Constants::A_FILE) == 0 && !overflow ){
                         let mut new_chessboard = self.clone();
                         new_chessboard.white_to_move = !new_chessboard.white_to_move;
                         new_chessboard.prev_pos_pawns = new_chessboard.white_pawns;
@@ -491,14 +496,14 @@ pub mod chessboard {
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(8);
                     }
                     //check if while exited because of enemy piece
-                    if self.get_all_white_pieces() & attacked_square > 0 {
+                    if self.get_all_white_pieces() & attacked_square > 0 && !overflow{
                         let mut new_chessboard = self.clone();
                         new_chessboard.white_to_move = !new_chessboard.white_to_move;
                         new_chessboard.prev_pos_pawns = new_chessboard.black_pawns;
                     
                         new_chessboard.black_rooks -= square;
                         new_chessboard.black_rooks += attacked_square;
-                        new_chessboard.remove_black_piece(attacked_square);
+                        new_chessboard.remove_white_piece(attacked_square);
                         result.push(new_chessboard);
                     }
 
@@ -539,7 +544,7 @@ pub mod chessboard {
                         attacked_square = attacked_square >> 1;
                     }
                     //check if while exited because of enemy piece
-                    if self.get_all_white_pieces() & attacked_square > 0 {
+                    if self.get_all_white_pieces() & attacked_square > 0 && ( (attacked_square & Constants::H_FILE) == 0 && attacked_square > 0 ) {
                         let mut new_chessboard = self.clone();
                         new_chessboard.white_to_move = !new_chessboard.white_to_move;
                         new_chessboard.prev_pos_pawns = new_chessboard.black_pawns;
@@ -564,7 +569,7 @@ pub mod chessboard {
                         
                     }
                     //check if while exited because of enemy piece
-                    if self.get_all_white_pieces() & attacked_square > 0 {
+                    if self.get_all_white_pieces() & attacked_square > 0 && ( (attacked_square & Constants::A_FILE) == 0 && !overflow ){
                         let mut new_chessboard = self.clone();
                         new_chessboard.white_to_move = !new_chessboard.white_to_move;
                         new_chessboard.prev_pos_pawns = new_chessboard.black_pawns;
@@ -662,7 +667,7 @@ pub mod chessboard {
 
                     // DOWN-LEFT
                     attacked_square  = square >> 17;
-                    if (attacked_square > 0) && (attacked_square & Constants::H_FILE) == 0 && self.get_all_white_pieces() == 0 {
+                    if (attacked_square > 0) && (attacked_square & Constants::H_FILE) == 0 && (attacked_square & self.get_all_white_pieces()) == 0 {
                         if (self.get_all_black_pieces() & attacked_square) > 0 {
                             let mut new_chessboard = self.clone();
                             new_chessboard.white_to_move = !new_chessboard.white_to_move;
@@ -815,7 +820,7 @@ pub mod chessboard {
                     // UP-LEFT
                     (attacked_square, overflow)  = square.overflowing_loss_checked_shl(15);
 
-                    if !overflow && (attacked_square & Constants::H_FILE) == 0 && (attacked_square & self.get_all_white_pieces()) == 0 {
+                    if !overflow && (attacked_square & Constants::H_FILE) == 0 && (attacked_square & self.get_all_black_pieces()) == 0 {
                         
                         if (self.get_all_white_pieces() & attacked_square) > 0 {
                             let mut new_chessboard = self.clone();
@@ -984,33 +989,38 @@ pub mod chessboard {
             let mut result: Vec<ChessBoard> = vec![];
             let white_bishops = self.white_bishops;
             let mut square: u64;
+            let mut hit_piece: bool;
             for i in 0..64 {
                 square =  1 << i;
 
                 if white_bishops & square > 0 {
                     // CHECK UPRIGHT
+                    hit_piece = false;
                     let (mut attacked_square, mut overflow) = square.overflowing_loss_checked_shl(9);
-                    while !overflow && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0  {
-                        white_bishop_move(square, attacked_square, self, &mut result);
+                    while !overflow && !hit_piece && attacked_square & Constants::A_FILE == 0  {
+                        hit_piece = white_bishop_move(square, attacked_square, self, &mut result);
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(9);
                     }
                     // CHECK UPLEFT
+                    hit_piece = false;
                     let (mut attacked_square, mut overflow) = square.overflowing_loss_checked_shl(7);
-                    while !overflow && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
-                        white_bishop_move(square, attacked_square, self, &mut result);
+                    while !overflow && !hit_piece && attacked_square & Constants::H_FILE == 0 {
+                        hit_piece = white_bishop_move(square, attacked_square, self, &mut result);
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(7);
                     }
                     // CHECK DOWNRIGHT
+                    hit_piece = false;
                     let mut attacked_square = square >> 7;
-                    while (attacked_square > 0) && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0 {
-                        white_bishop_move(square, attacked_square, self, &mut result);
+                    while (attacked_square > 0) && !hit_piece && attacked_square & Constants::A_FILE == 0 {
+                        hit_piece = white_bishop_move(square, attacked_square, self, &mut result);
                         attacked_square = attacked_square >> 7;
                     }
 
                     // CHECK DOWNLEFT
+                    hit_piece = false;
                     let mut attacked_square = square >> 9 ;
-                    while (attacked_square > 0) && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
-                        white_bishop_move(square, attacked_square, self, &mut result);
+                    while (attacked_square > 0) && !hit_piece && attacked_square & Constants::H_FILE == 0 {
+                        hit_piece = white_bishop_move(square, attacked_square, self, &mut result);
                         attacked_square = attacked_square >> 9;
                     }
                 }
@@ -1022,33 +1032,38 @@ pub mod chessboard {
             let mut result: Vec<ChessBoard> = vec![];
             let black_bishops = self.black_bishops;
             let mut square: u64;
+            let mut hit_piece: bool;
             for i in 0..64 {
                 square =  1 << i;
 
                 if black_bishops & square > 0 {
                     // CHECK UPRIGHT
+                    hit_piece = false;
                     let (mut attacked_square, mut overflow) = square.overflowing_loss_checked_shl(9);
-                    while !overflow && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0  {
-                        black_bishop_move(square, attacked_square, self, &mut result);
+                    while !overflow && !hit_piece && attacked_square & Constants::A_FILE == 0  {
+                        hit_piece = black_bishop_move(square, attacked_square, self, &mut result);
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(9);
                     }
                     // CHECK UPLEFT
+                    hit_piece = false;
                     let (mut attacked_square, mut overflow) = square.overflowing_loss_checked_shl(7);
-                    while !overflow && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
-                        black_bishop_move(square, attacked_square, self, &mut result);
+                    while !overflow && !hit_piece && attacked_square & Constants::H_FILE == 0 {
+                        hit_piece = black_bishop_move(square, attacked_square, self, &mut result);
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(7);
                     }
                     // CHECK DOWNRIGHT
+                    hit_piece = false;
                     let mut attacked_square = square >> 7;
-                    while (attacked_square > 0) && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0 {
-                        black_bishop_move(square, attacked_square, self, &mut result);
+                    while (attacked_square > 0) && !hit_piece && attacked_square & Constants::A_FILE == 0 {
+                        hit_piece = black_bishop_move(square, attacked_square, self, &mut result);
                         attacked_square = attacked_square >> 7;
                     }
 
                     // CHECK DOWNLEFT
+                    hit_piece = false;
                     let mut attacked_square = square >> 9 ;
-                    while (attacked_square > 0) && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
-                        black_bishop_move(square, attacked_square, self, &mut result);
+                    while (attacked_square > 0) && !hit_piece && attacked_square & Constants::H_FILE == 0 {
+                        hit_piece = black_bishop_move(square, attacked_square, self, &mut result);
                         attacked_square = attacked_square >> 9;
                     }
                 }
@@ -1061,64 +1076,73 @@ pub mod chessboard {
             let mut result: Vec<ChessBoard> = vec![];
             let white_queens = self.white_queens;
             let mut square: u64;
+            let mut hit_piece: bool;
             for i in 0..64 {
                 square =  1 << i;
                 // check if queen occupies square
                 if white_queens & square > 0 {
 
                     // CHECK UP
+                    hit_piece = false;
                     let (mut attacked_square, mut overflow) = square.overflowing_loss_checked_shl(8);
-                    while !overflow && (self.get_all_pieces() & attacked_square) == 0 {
+                    while !overflow && !hit_piece {
                         
-                        white_queen_move(square, attacked_square, self, &mut result);
+                        hit_piece = white_queen_move(square, attacked_square, self, &mut result);
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(8);
                     }
 
                     // CHECK DOWN
+                    hit_piece = false;
                     attacked_square = square >> 8;
-                    while attacked_square > 0 && (self.get_all_pieces() & attacked_square) == 0 {
-                        white_queen_move(square, attacked_square, self, &mut result);
+                    while attacked_square > 0 && !hit_piece {
+                        hit_piece = white_queen_move(square, attacked_square, self, &mut result);
                         attacked_square = attacked_square >> 8;
                     }
 
                     // CHECK LEFT
+                    hit_piece = false;
                     attacked_square = square >> 1;
-                    while (attacked_square & Constants::H_FILE) == 0 && (self.get_all_pieces() & attacked_square) == 0 && attacked_square > 0 {
-                        white_queen_move(square, attacked_square, self, &mut result);
+                    while (attacked_square & Constants::H_FILE) == 0 && !hit_piece && attacked_square > 0 {
+                        hit_piece = white_queen_move(square, attacked_square, self, &mut result);
                         attacked_square = attacked_square >> 1;
                     }
 
 
                     // CHECK RIGHT
+                    hit_piece = false;
                     (attacked_square, overflow) = square.overflowing_loss_checked_shl(1);
-                    while (attacked_square & Constants::A_FILE) == 0 && (self.get_all_pieces() & attacked_square) == 0 && !overflow {
-                        white_queen_move(square, attacked_square, self, &mut result);
+                    while (attacked_square & Constants::A_FILE) == 0 && !hit_piece && !overflow {
+                        hit_piece = white_queen_move(square, attacked_square, self, &mut result);
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(1);
                     }
 
                     // CHECK UPRIGHT
+                    hit_piece = false;
                     let (mut attacked_square, mut overflow) = square.overflowing_loss_checked_shl(9);
-                    while !overflow && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0  {
-                        white_queen_move(square, attacked_square, self, &mut result);
+                    while !overflow && !hit_piece && attacked_square & Constants::A_FILE == 0  {
+                        hit_piece = white_queen_move(square, attacked_square, self, &mut result);
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(9);
                     }
                     // CHECK UPLEFT
+                    hit_piece = false;
                     let (mut attacked_square, mut overflow) = square.overflowing_loss_checked_shl(7);
-                    while !overflow && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
-                        white_queen_move(square, attacked_square, self, &mut result);
+                    while !overflow && !hit_piece && attacked_square & Constants::H_FILE == 0 {
+                        hit_piece = white_queen_move(square, attacked_square, self, &mut result);
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(7);
                     }
                     // CHECK DOWNRIGHT
+                    hit_piece = false;
                     let mut attacked_square = square >> 7;
-                    while (attacked_square > 0) && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0 {
-                        white_queen_move(square, attacked_square, self, &mut result);
+                    while (attacked_square > 0) && !hit_piece && attacked_square & Constants::A_FILE == 0 {
+                        hit_piece = white_queen_move(square, attacked_square, self, &mut result);
                         attacked_square = attacked_square >> 7;
                     }
 
                     // CHECK DOWNLEFT
+                    hit_piece = false;
                     let mut attacked_square = square >> 9 ;
-                    while (attacked_square > 0) && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
-                        white_queen_move(square, attacked_square, self, &mut result);
+                    while (attacked_square > 0) && !hit_piece && attacked_square & Constants::H_FILE == 0 {
+                        hit_piece = white_queen_move(square, attacked_square, self, &mut result);
                         attacked_square = attacked_square >> 9;
                     }
 
@@ -1133,64 +1157,73 @@ pub mod chessboard {
             let mut result: Vec<ChessBoard> = vec![];
             let black_queens = self.black_queens;
             let mut square: u64;
+            let mut hit_piece;
             for i in 0..64 {
                 square =  1 << i;
                 // check if queen occupies square
                 if black_queens & square > 0 {
 
                     // CHECK UP
+                    hit_piece = false;
                     let (mut attacked_square, mut overflow) = square.overflowing_loss_checked_shl(8);
-                    while !overflow && (self.get_all_pieces() & attacked_square) == 0 {
+                    while !overflow && !hit_piece {
                         
-                        black_queen_move(square, attacked_square, self, &mut result);
+                        hit_piece = black_queen_move(square, attacked_square, self, &mut result);
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(8);
                     }
 
                     // CHECK DOWN
+                    hit_piece = false;
                     attacked_square = square >> 8;
-                    while attacked_square > 0 && (self.get_all_pieces() & attacked_square) == 0 {
-                        black_queen_move(square, attacked_square, self, &mut result);
+                    while attacked_square > 0 && !hit_piece {
+                        hit_piece = black_queen_move(square, attacked_square, self, &mut result);
                         attacked_square = attacked_square >> 8;
                     }
 
                     // CHECK LEFT
+                    hit_piece = false;
                     attacked_square = square >> 1;
-                    while (attacked_square & Constants::H_FILE) == 0 && (self.get_all_pieces() & attacked_square) == 0 && attacked_square > 0 {
-                        black_queen_move(square, attacked_square, self, &mut result);
+                    while (attacked_square & Constants::H_FILE) == 0 && !hit_piece && attacked_square > 0 {
+                        hit_piece = black_queen_move(square, attacked_square, self, &mut result);
                         attacked_square = attacked_square >> 1;
                     }
 
 
                     // CHECK RIGHT
+                    hit_piece = false;
                     (attacked_square, overflow) = square.overflowing_loss_checked_shl(1);
-                    while (attacked_square & Constants::A_FILE) == 0 && (self.get_all_pieces() & attacked_square) == 0 && !overflow {
-                        black_queen_move(square, attacked_square, self, &mut result);
+                    while (attacked_square & Constants::A_FILE) == 0 && !hit_piece && !overflow {
+                        hit_piece = black_queen_move(square, attacked_square, self, &mut result);
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(1);
                     }
 
                     // CHECK UPRIGHT
+                    hit_piece = false;
                     let (mut attacked_square, mut overflow) = square.overflowing_loss_checked_shl(9);
-                    while !overflow && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0  {
-                        black_queen_move(square, attacked_square, self, &mut result);
+                    while !overflow && !hit_piece && attacked_square & Constants::A_FILE == 0  {
+                        hit_piece = black_queen_move(square, attacked_square, self, &mut result);
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(9);
                     }
                     // CHECK UPLEFT
+                    hit_piece = false;
                     let (mut attacked_square, mut overflow) = square.overflowing_loss_checked_shl(7);
-                    while !overflow && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
-                        black_queen_move(square, attacked_square, self, &mut result);
+                    while !overflow && !hit_piece && attacked_square & Constants::H_FILE == 0 {
+                        hit_piece = black_queen_move(square, attacked_square, self, &mut result);
                         (attacked_square, overflow) = attacked_square.overflowing_loss_checked_shl(7);
                     }
                     // CHECK DOWNRIGHT
+                    hit_piece = false;
                     let mut attacked_square = square >> 7;
-                    while (attacked_square > 0) && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0 {
-                        black_queen_move(square, attacked_square, self, &mut result);
+                    while (attacked_square > 0) && !hit_piece && attacked_square & Constants::A_FILE == 0 {
+                        hit_piece = black_queen_move(square, attacked_square, self, &mut result);
                         attacked_square = attacked_square >> 7;
                     }
 
                     // CHECK DOWNLEFT
+                    hit_piece = false;
                     let mut attacked_square = square >> 9 ;
-                    while (attacked_square > 0) && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
-                        black_queen_move(square, attacked_square, self, &mut result);
+                    while (attacked_square > 0) && !hit_piece && attacked_square & Constants::H_FILE == 0 {
+                        hit_piece = black_queen_move(square, attacked_square, self, &mut result);
                         attacked_square = attacked_square >> 9;
                     }
 
@@ -1206,48 +1239,48 @@ pub mod chessboard {
 
             // CHECK UP
             let (mut attacked_square, mut overflow) = white_king.overflowing_loss_checked_shl(8);
-            if !overflow && (self.get_all_pieces() & attacked_square) == 0 {            
+            if !overflow && (self.get_all_white_pieces() & attacked_square) == 0 {            
                 white_king_move(white_king, attacked_square, self, &mut result);
             }
 
             // CHECK DOWN
             attacked_square = white_king >> 8;
-            if attacked_square > 0 && (self.get_all_pieces() & attacked_square) == 0 {
+            if attacked_square > 0 && (self.get_all_white_pieces() & attacked_square) == 0 {
                 white_king_move(white_king, attacked_square, self, &mut result);
             }
 
             // CHECK LEFT
             attacked_square = white_king >> 1;
-            if (attacked_square & Constants::H_FILE) == 0 && (self.get_all_pieces() & attacked_square) == 0 && attacked_square > 0 {
+            if (attacked_square & Constants::H_FILE) == 0 && (self.get_all_white_pieces() & attacked_square) == 0 && attacked_square > 0 {
                 white_king_move(white_king, attacked_square, self, &mut result);
             }
 
             // CHECK RIGHT
             (attacked_square, overflow) = white_king.overflowing_loss_checked_shl(1);
-            if (attacked_square & Constants::A_FILE) == 0 && (self.get_all_pieces() & attacked_square) == 0 && !overflow {
+            if (attacked_square & Constants::A_FILE) == 0 && (self.get_all_white_pieces() & attacked_square) == 0 && !overflow {
                 white_king_move(white_king, attacked_square, self, &mut result);
             }
 
             // CHECK UPRIGHT
             (attacked_square, overflow) = white_king.overflowing_loss_checked_shl(9);
-            if !overflow && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0  {
+            if !overflow && (self.get_all_white_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0  {
                 white_king_move(white_king, attacked_square, self, &mut result);
             }
             // CHECK UPLEFT
             (attacked_square, overflow) = white_king.overflowing_loss_checked_shl(7);
-            if !overflow && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
+            if !overflow && (self.get_all_white_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
                 white_king_move(white_king, attacked_square, self, &mut result);
             }
 
             // CHECK DOWNRIGHT
             attacked_square = white_king >> 7;
-            if (attacked_square > 0) && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0 {
+            if (attacked_square > 0) && (self.get_all_white_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0 {
                 white_king_move(white_king, attacked_square, self, &mut result);
             }
 
             // CHECK DOWNLEFT
             attacked_square = white_king >> 9 ;
-            if (attacked_square > 0) && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
+            if (attacked_square > 0) && (self.get_all_white_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
                 white_king_move(white_king, attacked_square, self, &mut result);
             }
 
@@ -1277,48 +1310,48 @@ pub mod chessboard {
 
             // CHECK UP
             let (mut attacked_square, mut overflow) = black_king.overflowing_loss_checked_shl(8);
-            if !overflow && (self.get_all_pieces() & attacked_square) == 0 {            
+            if !overflow && (self.get_all_black_pieces() & attacked_square) == 0 {            
                 black_king_move(black_king, attacked_square, self, &mut result);
             }
 
             // CHECK DOWN
             attacked_square = black_king >> 8;
-            if attacked_square > 0 && (self.get_all_pieces() & attacked_square) == 0 {
+            if attacked_square > 0 && (self.get_all_black_pieces() & attacked_square) == 0 {
                 black_king_move(black_king, attacked_square, self, &mut result);
             }
 
             // CHECK LEFT
             attacked_square = black_king >> 1;
-            if (attacked_square & Constants::H_FILE) == 0 && (self.get_all_pieces() & attacked_square) == 0 && attacked_square > 0 {
+            if (attacked_square & Constants::H_FILE) == 0 && (self.get_all_black_pieces() & attacked_square) == 0 && attacked_square > 0 {
                 black_king_move(black_king, attacked_square, self, &mut result);
             }
 
             // CHECK RIGHT
             (attacked_square, overflow) = black_king.overflowing_loss_checked_shl(1);
-            if (attacked_square & Constants::A_FILE) == 0 && (self.get_all_pieces() & attacked_square) == 0 && !overflow {
+            if (attacked_square & Constants::A_FILE) == 0 && (self.get_all_black_pieces() & attacked_square) == 0 && !overflow {
                 black_king_move(black_king, attacked_square, self, &mut result);
             }
 
             // CHECK UPRIGHT
             (attacked_square, overflow) = black_king.overflowing_loss_checked_shl(9);
-            if !overflow && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0  {
+            if !overflow && (self.get_all_black_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0  {
                 black_king_move(black_king, attacked_square, self, &mut result);
             }
             // CHECK UPLEFT
             (attacked_square, overflow) = black_king.overflowing_loss_checked_shl(7);
-            if !overflow && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
+            if !overflow && (self.get_all_black_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
                 black_king_move(black_king, attacked_square, self, &mut result);
             }
 
             // CHECK DOWNRIGHT
             attacked_square = black_king >> 7;
-            if (attacked_square > 0) && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0 {
+            if (attacked_square > 0) && (self.get_all_black_pieces() & attacked_square) == 0 && attacked_square & Constants::A_FILE == 0 {
                 black_king_move(black_king, attacked_square, self, &mut result);
             }
 
             // CHECK DOWNLEFT
             attacked_square = black_king >> 9 ;
-            if (attacked_square > 0) && (self.get_all_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
+            if (attacked_square > 0) && (self.get_all_black_pieces() & attacked_square) == 0 && attacked_square & Constants::H_FILE == 0 {
                 black_king_move(black_king, attacked_square, self, &mut result);
             }
 
@@ -1434,11 +1467,192 @@ pub mod chessboard {
                 if !is_checked_after_black_move {
                     result.push(*mov);
                     pseudo_legal_white_moves_for_each_black_move.push(pseudo_legal_white_moves)
-                } 
+                }
             }
 
             return (result, pseudo_legal_white_moves_for_each_black_move);
 
+        }
+        
+        pub fn legal_moves(&self, pseudo_legal: Option<&Vec<ChessBoard>>) -> (Vec<ChessBoard>, Vec<Vec<ChessBoard>>){
+            let param;
+            if pseudo_legal.is_some() {
+                param = pseudo_legal;
+            } else {
+                param = None
+            }
+
+            if self.white_to_move {
+                return self.get_all_legal_white_moves(param);
+            } else {
+                return self.get_all_legal_black_moves(param); 
+            }
+        }
+
+        pub fn whiteDoubledPawns(&self) -> u32 {
+            let pawns = self.white_pawns;
+            let mask = pawns << 8;
+            return (pawns & mask).count_ones();
+        }
+
+        pub fn blackDoubledPawns(&self) -> u32 {
+            let pawns = self.black_pawns;
+            let mask = pawns >> 8;
+            return (pawns & mask).count_ones();
+        }
+
+        pub fn whiteBlockedPawns(&self) -> u32 {
+            let pawns = self.white_pawns;
+            let mask = pawns << 8;
+            let all_pieces = self.get_all_pieces();
+
+            return (all_pieces & mask).count_ones();
+        }
+
+        pub fn blackBlockedPawns(&self) -> u32 {
+            let pawns = self.black_pawns;
+            let mask = pawns >> 8;
+            let all_pieces = self.get_all_pieces();
+
+            return (all_pieces & mask).count_ones();
+        }
+
+        // pub fn perft(&self, depth: u64) {
+        //     if depth == 0 {
+        //         return;
+        //     }
+
+        //     if self.white_to_move {
+        //         for pos in self.get_all_legal_white_moves(None).0{
+        //             pos.perft(depth - 1);
+        //         }
+        //     } else {
+        //         for pos in self.get_all_legal_black_moves(None).0{
+        //             pos.perft(depth - 1);
+        //         }
+        //     }
+        // }
+
+        pub fn _perft(&self, depth: u64,  currDepth: u64, numberOfPositions: u64, pseudo_legal: Option<&Vec<ChessBoard>>) -> u64{
+            let mut _numberOfPositions= numberOfPositions;
+            let param;
+            if pseudo_legal.is_some() {
+                param = pseudo_legal;
+            } else {
+                param = None;
+            }
+            // let mut currDepth = currDepth;
+            if depth == currDepth {
+                _numberOfPositions += 1;
+                
+            } else if depth < currDepth {
+                return 0;
+            } else {
+                if self.white_to_move {
+                    let (positions, next) = self.get_all_legal_white_moves(param);
+                    for (i, pos) in positions.iter().enumerate() {
+                        _numberOfPositions = pos._perft(depth, currDepth + 1, _numberOfPositions, Some(&next[i]));
+                    }
+                } else {
+                    let (positions, next) = self.get_all_legal_black_moves(param);
+                    for (i, pos) in positions.iter().enumerate() {
+                        _numberOfPositions = pos._perft(depth, currDepth + 1, _numberOfPositions, Some(&next[i]));
+                    }
+                }
+            }
+
+            // currDepth -= 1;
+            // println!("{}", _numberOfPositions);
+            return _numberOfPositions;
+
+        }
+
+        pub fn perft(&self, depth: u64) -> (HashMap<ChessBoard, u64>, u64) {
+            let mut result = HashMap::new();
+            let mut total = 0;
+            let (positions, next) ;
+            if self.white_to_move {
+                (positions, next) = self.get_all_legal_white_moves(None);
+            } else {
+                (positions, next) = self.get_all_legal_black_moves(None);
+            }
+
+            for (i, pos) in positions.iter().enumerate() {
+                let num_of_positions = pos._perft(depth - 1, 0, 0, Some(&next[i]));
+                total += num_of_positions;
+                result.insert(*pos, num_of_positions);
+            }
+
+            return (result, total);
+        }
+
+        pub fn _minimax(&self, depth: u64, pseudo_legal: Option<&Vec<ChessBoard>>) -> f32 {
+            if depth == 0 {
+                return self.evaluate();
+            }
+
+            let param;
+            if pseudo_legal.is_some() {
+                param = pseudo_legal;
+            } else {
+                param = None;
+            }
+
+            if self.white_to_move {
+                let mut value = f32::NEG_INFINITY;
+                let (moves, next_pseudo_legal) = self.get_all_legal_white_moves(param);
+                for (i, mov) in moves.iter().enumerate() {
+                    value = f32::max(value, mov._minimax(depth - 1, Some(&next_pseudo_legal[i])));
+                }
+                return value;
+            } else {
+                let mut value = f32::INFINITY;
+                let (moves, next_pseudo_legal) = self.get_all_legal_black_moves(param);
+        
+                for (i, mov) in moves.iter().enumerate() {
+                    value = f32::min(value, mov._minimax(depth - 1, Some(&next_pseudo_legal[i])));
+                }
+                return value;
+            }
+
+        }
+
+
+        pub fn minimax(&self, depth: u64) -> Vec<(ChessBoard, f32)> {
+            let mut res: Vec<(ChessBoard, f32)> = vec![];
+
+            let (moves, next_pseudo_legal) = self.legal_moves(None);
+            for (i, mov) in moves.iter().enumerate() {
+                res.push((*mov, self._minimax(depth - 1, Some(&next_pseudo_legal[i]))))
+            }
+            
+
+            res.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+            return res;
+        }
+
+        pub fn evaluate(&self) -> f32 {
+            let (wK, bK) = (self.white_king.count_ones() as i32, self.black_king.count_ones() as i32);
+            let (wQ, bQ) = (self.white_queens.count_ones() as i32, self.black_queens.count_ones() as i32);
+            let (wR, bR) = (self.white_rooks.count_ones() as i32, self.black_rooks.count_ones() as i32);
+            let (wB, bB) = (self.white_bishops.count_ones() as i32, self.black_bishops.count_ones() as i32);
+            let (wN, bN) = (self.white_knights.count_ones() as i32, self.black_knights.count_ones() as i32);
+            let (wP, bP) = (self.white_pawns.count_ones() as i32, self.black_pawns.count_ones() as i32);
+
+            // Doubled pawns
+            let (wDoubled, bDoubled) = (self.whiteDoubledPawns() as i32, self.blackDoubledPawns() as i32); 
+            // Blocked pawns
+            let (wBlocked, bBlocked) = (self.whiteBlockedPawns() as i32, self.blackBlockedPawns() as i32);
+
+            // TODO: add mobility
+            let evaluation :f32 = (200 * (wK - bK)
+                                + 9 * (wQ - bQ)
+                                + 5 * (wR - bR)
+                                + 3 * (wB - bB + wN - bN)
+                                + 1 * (wP - bP)) as f32
+                                - 0.5 * (wDoubled - bDoubled + wBlocked - bBlocked) as f32;
+
+            return evaluation;
         }
 
     }

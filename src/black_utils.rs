@@ -1,6 +1,12 @@
 use crate::{chessboard::chessboard::{ChessBoard, Constants}, white_utils::get_all_attacked_squares_by_white};
 
-pub fn black_bishop_move(bishop_square: u64, attacked_square: u64, curr_chessboard: &ChessBoard, result: &mut Vec<ChessBoard>) {
+pub fn black_bishop_move(bishop_square: u64, attacked_square: u64, curr_chessboard: &ChessBoard, result: &mut Vec<ChessBoard>) -> bool {
+
+    if curr_chessboard.get_all_black_pieces() & attacked_square > 0 {
+        return true;
+    }
+
+    let mut hit_enemy_piece: bool = false;
     let mut new_chessboard = curr_chessboard.clone();
     new_chessboard.white_to_move = !new_chessboard.white_to_move;
     new_chessboard.prev_pos_pawns = new_chessboard.black_pawns;
@@ -11,13 +17,22 @@ pub fn black_bishop_move(bishop_square: u64, attacked_square: u64, curr_chessboa
 
     if curr_chessboard.get_all_white_pieces() & attacked_square > 0 {
         new_chessboard.remove_white_piece(attacked_square);
+        hit_enemy_piece = true;
     }
     
     result.push(new_chessboard);
+    return hit_enemy_piece;
 }
 
-pub fn black_queen_move(queen_square: u64, attacked_square: u64, curr_chessboard: &ChessBoard, result: &mut Vec<ChessBoard>) {
+pub fn black_queen_move(queen_square: u64, attacked_square: u64, curr_chessboard: &ChessBoard, result: &mut Vec<ChessBoard>) -> bool {
+    
+    if curr_chessboard.get_all_black_pieces() & attacked_square > 0 {
+        return true;
+    }
+
+    let mut hit_enemy_piece: bool = false;
     let mut new_chessboard = curr_chessboard.clone();
+    
     new_chessboard.white_to_move = !new_chessboard.white_to_move;
     new_chessboard.prev_pos_pawns = new_chessboard.black_pawns;
     
@@ -27,12 +42,18 @@ pub fn black_queen_move(queen_square: u64, attacked_square: u64, curr_chessboard
 
     if curr_chessboard.get_all_white_pieces() & attacked_square > 0 {
         new_chessboard.remove_white_piece(attacked_square);
+        hit_enemy_piece = true;
     }
     
     result.push(new_chessboard);
+    return hit_enemy_piece;
 }
 
 pub fn black_king_move(king_square: u64, attacked_square: u64, curr_chessboard: &ChessBoard, result: &mut Vec<ChessBoard>) {
+    // if get_all_attacked_squares_by_white(curr_chessboard).0 & attacked_square > 0 {
+    //     return;
+    // }
+
     let mut new_chessboard = curr_chessboard.clone();
     new_chessboard.white_to_move = !new_chessboard.white_to_move;
     new_chessboard.prev_pos_pawns = new_chessboard.black_pawns;
@@ -102,12 +123,13 @@ pub fn are_black_short_castling_squares_under_attack(chessboard: &ChessBoard) ->
     let (e8, f8, g8) = (0x1000000000000000, 0x2000000000000000, 0x4000000000000000);
     let (e8_attacked, f8_attacked, g8_attacked);
 
+    let all_attacked_squares_by_white = get_all_attacked_squares_by_white(chessboard).0;
 
-    e8_attacked = get_all_attacked_squares_by_white(chessboard).0 & e8 > 0;
+    e8_attacked = all_attacked_squares_by_white & e8 > 0;
 
-    f8_attacked = get_all_attacked_squares_by_white(chessboard).0 & f8 > 0;
+    f8_attacked = all_attacked_squares_by_white & f8 > 0;
 
-    g8_attacked = get_all_attacked_squares_by_white(chessboard).0 & g8 > 0;
+    g8_attacked = all_attacked_squares_by_white & g8 > 0;
 
 
     if e8_attacked || f8_attacked || g8_attacked {
@@ -121,11 +143,13 @@ pub fn are_black_long_castling_squares_under_attack(chessboard: &ChessBoard) -> 
     let (c8, d8, e8) = (0x400000000000000, 0x800000000000000, 0x1000000000000000);
     let (c8_attacked, d8_attacked, e8_attacked);
     
-    e8_attacked = get_all_attacked_squares_by_white(chessboard).0 & e8 > 0;
+    let all_attacked_squares_by_white = get_all_attacked_squares_by_white(chessboard).0;
 
-    d8_attacked = get_all_attacked_squares_by_white(chessboard).0 & d8 > 0;
+    e8_attacked = all_attacked_squares_by_white & e8 > 0;
 
-    c8_attacked = get_all_attacked_squares_by_white(chessboard).0 & c8 > 0;
+    d8_attacked = all_attacked_squares_by_white & d8 > 0;
+
+    c8_attacked = all_attacked_squares_by_white & c8 > 0;
 
 
     if e8_attacked || d8_attacked || c8_attacked {
