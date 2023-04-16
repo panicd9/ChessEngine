@@ -528,6 +528,8 @@ pub mod chessboard {
                         new_chessboard.black_rooks -= square;
                         new_chessboard.black_rooks += attacked_square;
                         new_chessboard.remove_white_piece(attacked_square);
+                        // new_chessboard.print_chessboard();
+                        // println!("Evaluation: {}", new_chessboard.evaluate());
                         result.push(new_chessboard);
                     }
 
@@ -1623,7 +1625,7 @@ pub mod chessboard {
 
             let (moves, next_pseudo_legal) = self.legal_moves(None);
             for (i, mov) in moves.iter().enumerate() {
-                res.push((*mov, self._minimax(depth - 1, Some(&next_pseudo_legal[i]))))
+                res.push((*mov, mov._minimax(depth - 1, Some(&next_pseudo_legal[i]))));
             }
             
 

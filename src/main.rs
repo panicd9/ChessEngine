@@ -11,7 +11,18 @@ fn main() {
     env::set_var("RUST_BACKTRACE", "full");
     // env::set_var("RUST_MIN_STACK", "33554432");
     let mut cb = ChessBoard::new();
-    cb.print_chessboard();
+    
+
+    // cb.white_queens = 0x1000000000000;
+    // cb.black_pawns = 0xFE000000000000;
+    // cb.white_to_move = false;
+
+    // cb.black_rooks = 0x8001000000000000;
+    // cb.black_pawns = 0xFE000000000000;
+    // cb.white_queens = 0;
+
+    cb.white_queens = 0x8000000;
+
     // cb.white_pawns = 0x80007F00;
     // cb.white_to_move = false;
     // cb.black_pawns = 0xFE000100000000;
@@ -21,15 +32,32 @@ fn main() {
     // cb.black_pawns = 0xFE000001000000;
     // cb.white_to_move = true;
 
-
+    cb.print_chessboard();
+    // let x = cb.get_all_legal_white_moves(None).0;
+    // for a in x {
+    //     a.print_chessboard();
+    //     // println!("AA");
+    //     println!("{}", a.evaluate());
+    // }
     let now = Instant::now();
     // cb.perft(3);
     // let x = cb.perft(4);
-    let search = cb.minimax(5);
-    for mov in search {
+    let search = cb.minimax(4);
+    for mov in search.iter() {
         mov.0.print_chessboard();
-        println!("Eval: {}", mov.1);
+        println!("Eval: {}", mov.0.evaluate());
+        println!("Minimax eval: {}", mov.1);
     }
+
+    println!("------------------------------------");
+    let search2 = search.iter().last().unwrap().0.minimax(3);
+
+    for mov in search2.iter().rev() {
+        mov.0.print_chessboard();
+        println!("Eval: {}", mov.0.evaluate());
+        println!("Minimax eval: {}", mov.1);
+    }
+
     // for (k, v) in x.0 { 
     //     k.print_chessboard();
     //     println!("Positions: {}", v);
