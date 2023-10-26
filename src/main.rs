@@ -7,6 +7,7 @@ use std::{vec, env, time::Instant, collections::HashMap};
 
 use crate::chessboard::chessboard::ChessBoard;
 
+const DEPTH: u64 = 4;
 fn main() {
     env::set_var("RUST_BACKTRACE", "full");
     // env::set_var("RUST_MIN_STACK", "33554432");
@@ -21,7 +22,7 @@ fn main() {
     // cb.black_pawns = 0xFE000000000000;
     // cb.white_queens = 0;
 
-    cb.white_queens = 0x8000000;
+    // cb.white_queens = 0x8000000;
 
     // cb.white_pawns = 0x80007F00;
     // cb.white_to_move = false;
@@ -41,22 +42,22 @@ fn main() {
     // }
     let now = Instant::now();
     // cb.perft(3);
-    // let x = cb.perft(4);
-    let search = cb.minimax(4);
-    for mov in search.iter() {
-        mov.0.print_chessboard();
-        println!("Eval: {}", mov.0.evaluate());
-        println!("Minimax eval: {}", mov.1);
-    }
+    let numOfPositions = cb.perft(4);
+    // let search = cb.minimax(DEPTH);
+    // for mov in search.iter() {
+    //     mov.0.print_chessboard();
+    //     println!("Eval: {}", mov.0.evaluate());
+    //     println!("Minimax eval: {}", mov.1);
+    // }
 
     println!("------------------------------------");
-    let search2 = search.iter().last().unwrap().0.minimax(3);
+    // let search2 = search.iter().last().unwrap().0.minimax(3);
 
-    for mov in search2.iter().rev() {
-        mov.0.print_chessboard();
-        println!("Eval: {}", mov.0.evaluate());
-        println!("Minimax eval: {}", mov.1);
-    }
+    // for mov in search2.iter().rev() {
+    //     mov.0.print_chessboard();
+    //     println!("Eval: {}", mov.0.evaluate());
+    //     println!("Minimax eval: {}", mov.1);
+    // }
 
     // for (k, v) in x.0 { 
     //     k.print_chessboard();
@@ -64,7 +65,8 @@ fn main() {
     // }
     // println!("Total positions: {}", x.1);
     // println!("{:#?} \n\n", cb.perft(5));
-    println!("{}", now.elapsed().as_millis());
+    println!("Number of positions at depth {}: {}", DEPTH, numOfPositions.1);
+    println!("Elapsed time to calculate to depth {}: {}ms", DEPTH, now.elapsed().as_millis());
     // cb.perft(5);
 
     // let white_move = cb.get_all_legal_white_moves();
@@ -79,7 +81,7 @@ fn main() {
     //     return;
     // }
 
-    println!("SIZE: {}",std::mem::size_of::<ChessBoard>());
+    println!("std::mem::size_of::<ChessBoard>(): {}",std::mem::size_of::<ChessBoard>());
 
     let mut last_positions: Vec<ChessBoard> = vec![cb];
     
@@ -156,9 +158,6 @@ fn main() {
     //     // positions.clear();
         
     // }
-
-    let elapsed = now.elapsed();
-    println!("time for 5 ply {}", elapsed.as_secs());
     
 
 }

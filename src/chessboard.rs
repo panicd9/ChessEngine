@@ -1403,7 +1403,8 @@ pub mod chessboard {
             return pseudo_legal_moves;
         }
 
-        pub fn get_all_legal_white_moves(&self, pseudo_legal_white_moves: Option<&Vec<ChessBoard>>) -> (Vec<ChessBoard>, Vec<Vec<ChessBoard>>) {
+        #[allow(unused_parens)]
+        pub fn get_all_legal_white_moves(&self, pseudo_legal_white_moves: Option<&Vec<ChessBoard>>) -> (Vec<ChessBoard>/* , Vec<Vec<ChessBoard>> */) {
             
             let mut result: Vec<ChessBoard> = vec![];
             let _pseudo_legal_white_moves: &Vec<ChessBoard>;
@@ -1418,13 +1419,13 @@ pub mod chessboard {
                 temp = self.get_all_pseudo_legal_white_moves();
                 _pseudo_legal_white_moves = &temp;
             }
-            
-            // let elapsed = now.elapsed();
-            // println!("{}", elapsed.as_micros());
+
 
             let mut is_checked_after_white_move: bool;
             let mut pseudo_legal_black_moves;
-            let mut pseudo_legal_black_moves_for_each_white_move = vec![];
+
+            // this was returning as second variable in struct
+            // let mut pseudo_legal_black_moves_for_each_white_move = vec![];
 
             for mov in _pseudo_legal_white_moves {
                 // let now = Instant::now();
@@ -1434,14 +1435,15 @@ pub mod chessboard {
 
                 if !is_checked_after_white_move {
                     result.push(*mov);
-                    pseudo_legal_black_moves_for_each_white_move.push(pseudo_legal_black_moves)
+                    // pseudo_legal_black_moves_for_each_white_move.push(pseudo_legal_black_moves);
                 } 
             }
 
-            return (result, pseudo_legal_black_moves_for_each_white_move);
+            return result;
         }
 
-        pub fn get_all_legal_black_moves(&self, pseudo_legal_black_moves: Option<&Vec<ChessBoard>>) -> (Vec<ChessBoard>, Vec<Vec<ChessBoard>>) {
+        #[allow(unused_parens)]
+        pub fn get_all_legal_black_moves(&self, pseudo_legal_black_moves: Option<&Vec<ChessBoard>>) -> (Vec<ChessBoard>/* , Vec<Vec<ChessBoard>> */) {
 
             let mut result: Vec<ChessBoard> = vec![];
             // let now = Instant::now();
@@ -1456,27 +1458,26 @@ pub mod chessboard {
                 temp = self.get_all_pseudo_legal_black_moves();
                 _pseudo_legal_black_moves = &temp;
             }
-            // let elapsed = now.elapsed();
-            // println!("{}", elapsed.as_micros());
 
             let mut is_checked_after_black_move: bool;
             let mut pseudo_legal_white_moves;
-            let mut pseudo_legal_white_moves_for_each_black_move = vec![];
+            // let mut pseudo_legal_white_moves_for_each_black_move = vec![];
 
             for mov in _pseudo_legal_black_moves {
                 (is_checked_after_black_move, pseudo_legal_white_moves) = mov.is_black_king_checked();
 
                 if !is_checked_after_black_move {
                     result.push(*mov);
-                    pseudo_legal_white_moves_for_each_black_move.push(pseudo_legal_white_moves)
+                    // pseudo_legal_white_moves_for_each_black_move.push(pseudo_legal_white_moves);
                 }
             }
 
-            return (result, pseudo_legal_white_moves_for_each_black_move);
+            return result;
 
         }
         
-        pub fn legal_moves(&self, pseudo_legal: Option<&Vec<ChessBoard>>) -> (Vec<ChessBoard>, Vec<Vec<ChessBoard>>){
+        #[allow(unused_parens)]
+        pub fn legal_moves(&self, pseudo_legal: Option<&Vec<ChessBoard>>) -> (Vec<ChessBoard>/* , Vec<Vec<ChessBoard>> */){
             let param;
             if pseudo_legal.is_some() {
                 param = pseudo_legal;
@@ -1535,14 +1536,44 @@ pub mod chessboard {
         //     }
         // }
 
-        pub fn _perft(&self, depth: u64,  currDepth: u64, numberOfPositions: u64, pseudo_legal: Option<&Vec<ChessBoard>>) -> u64{
+        /* This was before removing Vec<Vec<>> */
+        // pub fn _perft(&self, depth: u64,  currDepth: u64, numberOfPositions: u64, pseudo_legal: Option<&Vec<ChessBoard>>) -> u64{
+        //     let mut _numberOfPositions= numberOfPositions;
+        //     let param;
+        //     if pseudo_legal.is_some() {
+        //         param = pseudo_legal;
+        //     } else {
+        //         param = None;
+        //     }
+        //     // let mut currDepth = currDepth;
+        //     if depth == currDepth {
+        //         _numberOfPositions += 1;
+                
+        //     } else if depth < currDepth {
+        //         return 0;
+        //     } else {
+        //         if self.white_to_move {
+        //             let (positions, next) = self.get_all_legal_white_moves(param);
+        //             for (i, pos) in positions.iter().enumerate() {
+        //                 _numberOfPositions = pos._perft(depth, currDepth + 1, _numberOfPositions, Some(&next[i]));
+        //             }
+        //         } else {
+        //             let (positions, next) = self.get_all_legal_black_moves(param);
+        //             for (i, pos) in positions.iter().enumerate() {
+        //                 _numberOfPositions = pos._perft(depth, currDepth + 1, _numberOfPositions, Some(&next[i]));
+        //             }
+        //         }
+        //     }
+
+        //     // currDepth -= 1;
+        //     // println!("{}", _numberOfPositions);
+        //     return _numberOfPositions;
+
+        // }
+
+        pub fn _perft(&self, depth: u64,  currDepth: u64, numberOfPositions: u64) -> u64{
             let mut _numberOfPositions= numberOfPositions;
-            let param;
-            if pseudo_legal.is_some() {
-                param = pseudo_legal;
-            } else {
-                param = None;
-            }
+
             // let mut currDepth = currDepth;
             if depth == currDepth {
                 _numberOfPositions += 1;
@@ -1551,14 +1582,14 @@ pub mod chessboard {
                 return 0;
             } else {
                 if self.white_to_move {
-                    let (positions, next) = self.get_all_legal_white_moves(param);
+                    let positions = self.get_all_legal_white_moves(None);
                     for (i, pos) in positions.iter().enumerate() {
-                        _numberOfPositions = pos._perft(depth, currDepth + 1, _numberOfPositions, Some(&next[i]));
+                        _numberOfPositions = pos._perft(depth, currDepth + 1, _numberOfPositions);
                     }
                 } else {
-                    let (positions, next) = self.get_all_legal_black_moves(param);
+                    let positions = self.get_all_legal_black_moves(None);
                     for (i, pos) in positions.iter().enumerate() {
-                        _numberOfPositions = pos._perft(depth, currDepth + 1, _numberOfPositions, Some(&next[i]));
+                        _numberOfPositions = pos._perft(depth, currDepth + 1, _numberOfPositions);
                     }
                 }
             }
@@ -1572,15 +1603,15 @@ pub mod chessboard {
         pub fn perft(&self, depth: u64) -> (HashMap<ChessBoard, u64>, u64) {
             let mut result = HashMap::new();
             let mut total = 0;
-            let (positions, next) ;
+            let positions ;
             if self.white_to_move {
-                (positions, next) = self.get_all_legal_white_moves(None);
+                positions = self.get_all_legal_white_moves(None);
             } else {
-                (positions, next) = self.get_all_legal_black_moves(None);
+                positions = self.get_all_legal_black_moves(None);
             }
 
             for (i, pos) in positions.iter().enumerate() {
-                let num_of_positions = pos._perft(depth - 1, 0, 0, Some(&next[i]));
+                let num_of_positions = pos._perft(depth - 1, 0, 0);
                 total += num_of_positions;
                 result.insert(*pos, num_of_positions);
             }
@@ -1588,31 +1619,31 @@ pub mod chessboard {
             return (result, total);
         }
 
-        pub fn _minimax(&self, depth: u64, pseudo_legal: Option<&Vec<ChessBoard>>) -> f32 {
+        pub fn _minimax(&self, depth: u64) -> f32 {
             if depth == 0 {
                 return self.evaluate();
             }
 
-            let param;
-            if pseudo_legal.is_some() {
-                param = pseudo_legal;
-            } else {
-                param = None;
-            }
+            // let param;
+            // if pseudo_legal.is_some() {
+            //     param = pseudo_legal;
+            // } else {
+            //     param = None;
+            // }
 
             if self.white_to_move {
                 let mut value = f32::NEG_INFINITY;
-                let (moves, next_pseudo_legal) = self.get_all_legal_white_moves(param);
+                let moves = self.get_all_legal_white_moves(None);
                 for (i, mov) in moves.iter().enumerate() {
-                    value = f32::max(value, mov._minimax(depth - 1, Some(&next_pseudo_legal[i])));
+                    value = f32::max(value, mov._minimax(depth - 1));
                 }
                 return value;
             } else {
                 let mut value = f32::INFINITY;
-                let (moves, next_pseudo_legal) = self.get_all_legal_black_moves(param);
+                let moves = self.get_all_legal_black_moves(None);
         
                 for (i, mov) in moves.iter().enumerate() {
-                    value = f32::min(value, mov._minimax(depth - 1, Some(&next_pseudo_legal[i])));
+                    value = f32::min(value, mov._minimax(depth - 1));
                 }
                 return value;
             }
@@ -1623,9 +1654,9 @@ pub mod chessboard {
         pub fn minimax(&self, depth: u64) -> Vec<(ChessBoard, f32)> {
             let mut res: Vec<(ChessBoard, f32)> = vec![];
 
-            let (moves, next_pseudo_legal) = self.legal_moves(None);
-            for (i, mov) in moves.iter().enumerate() {
-                res.push((*mov, mov._minimax(depth - 1, Some(&next_pseudo_legal[i]))));
+            let moves = self.legal_moves(None);
+            for (_, mov) in moves.iter().enumerate() {
+                res.push((*mov, mov._minimax(depth - 1)));
             }
             
 
